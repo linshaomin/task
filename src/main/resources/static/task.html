@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>任务列表</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+</head>
+<body>
+
+<table class="layui-show" id="followTable" lay-filter="followTable" style="width: 80%" ></table>
+<div id="addTask" style="display: none;">
+    <form class="layui-form" id="add-form">
+        <div class="layui-form-item center" >
+            <label class="layui-form-label" style="width: 100px" >任务名称:</label>
+            <div class="layui-input-block">
+                <input type="text" name="name" required value="" style="width: 240px" lay-verify="required" placeholder="请输入任务名称" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label" style="width: 100px">任务占比:</label>
+            <div class="layui-input-inline">
+                <input type="number" name="ratio" required style="width: 240px" lay-verify="required" placeholder="请输入任务占比" autocomplete="off" class="layui-input">
+            </div>
+            <div class="layui-form-mid layui-word-aux">%</div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label" style="width: 100px">学生:</label>
+            <div class="layui-input-inline">
+                <div id="demo1"></div>
+            </div>
+        </div>
+<!--        <div class="layui-form-item">-->
+<!--            <label class="layui-form-label" style="width: 100px">是否开启总评:</label>-->
+<!--            <div class="layui-input-block">-->
+<!--                <input type="radio" name="isOpenComment" title="是" value="1" class="layui-input">-->
+<!--                <input type="radio" name="isOpenComment" title="否" value="0" class="layui-input" checked>-->
+<!--            </div>-->
+<!--        </div>-->
+        <div class="layui-form-item">
+            <label class="layui-form-label" style="width: 100px">指定老师:</label>
+            <div class="layui-input-inline">
+                <select name="tid" id="tid" lay-verify="required">
+                    <option value=""></option>
+                </select>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <button class="layui-btn" lay-submit lay-filter="save" >立即提交</button>
+                <button type="reset" class="layui-btn layui-btn-primary" id="closeBtn" >重置</button>
+            </div>
+        </div>
+    </form>
+</div>
+<script type="text/html" id="toolbarDemo">
+    <div style="display: flex;align-items: center;">
+        <div id="addDiv" class="layui-btn-container">
+            <button class="layui-btn layui-btn-sm" lay-event="onAddBtn">新增</button>
+        </div>
+        <div>
+            <input id="score" type="number" style="width: 150px" placeholder="请输入分数" autocomplete="off" class="layui-input">
+        </div>
+        <div>
+            <select lay-filter="qualified">
+                <option value="">是否合格</option>
+                <option value="1">合格</option>
+                <option value="0">不合格</option>
+            </select>
+        </div>
+        <div id="openCommentDiv">
+            <select lay-filter="comment">
+                <option value="">是否总评</option>
+                <option value="1">开启</option>
+                <option value="0">关闭</option>
+            </select>
+        </div>
+    </div>
+</script>
+
+<link rel="stylesheet" href="/layui/css/layui.css">
+<script src="/layui/layui.js" charset="utf-8"></script>
+<script src="/xm/xm-select.js" charset="utf-8"></script>
+
+<!-- 注意：如果你直接复制所有代码到本地，上述 JS 路径需要改成你本地的 -->
+<script type="text/html" id="barDemo">
+    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+</script>
+<script>
+    var $ = layui.jquery;
+    layui.use(['table','layer','form'],function(){
+        var table = layui.table;
+        var layer = layui.layer,
+            form = layui.form;
+        var roleType = window.sessionStorage.getItem('roleType')
+        table.render({
+            elem: '#followTable'
+            ,url: 'task/list'
+            ,toolbar: roleType == 1 || roleType == 2 ? '#toolbarDemo' : ''//开启头部工具栏，并为其绑定左侧模板
+            ,request: {
+                pageName: 'curPage' //页码的参数名称，默认：page
+                ,limitName: 'limit' //每页数据量的参数名，默认：limit
+            }
+            ,cellMinWidth: 80 //全局定义常规单元格的最小宽度，layui 2.2.1 新增
+            ,parseData: function(res){ //res 即为原始返回的数据
+            return {
+                "code": res.code, //解析接口状态
+                "msg": res.message, //解析提示文本
+                "count": res.page.totalCount, //解析数据长度
+                "data": res.page.list //解析数据列表
+            };
+        }
+            ,cols: [[
+                {type: 'checkbox', hide: roleType == 3}
+                ,{field:'name', width:150, title: '任务名称'}
+                ,{field:'ratio', width:100, title: '任务占比', edit: roleType == 1 ? 'text' : '' ,templet: function (d) {
+                            return d.ratio + '%'
+                        }
+                    }
+                ,{field:'sname', width:150, title: '学生'}
+                ,{field:'tname', width:150, title: '指定老师'}
+                ,{field:'isFinish', width:100, title: '是否完成', templet: function (d) {
+                        if(roleType == 1) {
+                            return  '<input type="checkbox" name="finish" value="'
+                                + d.id + '" lay-skin="switch" lay-text="开启|关闭" lay-filter="finish"'
+                                + (d.isFinish == 1 ? ' checked' : '') + '>'
+                        } else {
+                            return d.isFinish == 1 ? '是' : '否'
+                        }
+                    }}
+                ,{field:'isOpenComment', width:120, title: '是否开启总评', templet: function (d) {
+                        return d.isOpenComment == 1 ? '是' : '否'
+                    }}
+                ,{field: 'score', width: 100, title: '分数'}
+                ,{field:'isQualified', title: '是否合格', templet: function (d) {
+                        return d.isQualified == 1 ? '是' : '否'
+                    }}
+                ,{fixed: 'right', title:'操作', toolbar: '#barDemo', hide: roleType != 1}
+
+            ]],
+            page: true,
+            done() {
+                //绑定input失去焦点事件
+                $("#score").bind("blur", batchUpdateScore)
+            }
+        });
+
+        //监听单元格事件
+        table.on('tool(followTable)', function(obj){
+            var data = obj.data;
+            if(obj.event === 'del'){
+                layer.confirm('确定删除？', function(index){
+                    $.ajax({
+                        url:'task/delete',
+                        type:'POST',
+                        data:{id:data.id},
+                        success:function (msg) {
+                            obj.del();
+                        }
+                    })
+
+                    layer.close(index);
+                });
+            }
+        });
+
+        //监听单元格编辑
+        table.on('edit(followTable)', function (obj) {
+            var value = obj.value //得到修改后的值
+                , data = obj.data //得到所在行所有键值
+            if (obj.field == 'ratio') {
+                $.post('task/update', {id: data.id, ratio: value}, function (res) {
+                    table.reload('followTable');
+                });
+            }
+        });
+
+        //头工具栏事件
+        table.on('toolbar(followTable)', function(obj){
+            switch(obj.event){
+                case 'onAddBtn':
+                    layer.open({
+                        type: 1,
+                        title:"新增任务",
+                        area: ['500px', '350px'],
+                        content: $("#addTask"),
+                        success: function(layero, index){
+                            $.get('user/findAll', function (res) {
+                                var sids = []
+                                $('#tid').empty()
+                                $('#tid').append(new Option())
+                                for (const data of res.data) {
+                                    if(data.roleType == 2) {
+                                        $('#tid').append(new Option(data.name,data.id))
+                                    } else if(data.roleType == 3) {
+                                        sids.push({name:data.name,value:data.id})
+                                    }
+                                }
+                                xmSelect.render({
+                                    el: '#demo1',
+                                    data: sids,
+                                })
+                                form.render()
+                            });
+                        }
+                    });
+                    break;
+            };
+        });
+
+        form.on('submit(save)', function (data) {
+            var params = data.field;
+            params.sids = params.select
+            $.post('task/save', params, function (res) {
+                table.reload('followTable')
+            });
+        })
+
+        form.on('switch(finish)', function(obj){
+            $.post('task/update', {id:this.value,"isFinish":obj.elem.checked ? 1 : 0}, function (res) {
+                table.reload('followTable')
+            });
+        });
+
+        form.on('select(qualified)', function (obj) {
+            var checkStatus = table.checkStatus('followTable')
+            var ids = []
+            for(var data of checkStatus.data) {
+                if(!data.isOpenComment) {
+                    layer.alert('请等待总评开启!')
+                    return
+                }
+                ids.push(data.id)
+            }
+            if(ids.length > 0) {
+                $.post('task/batchUpdate', {ids:ids.join(","),"isQualified":obj.value}, function (res) {
+                    table.reload('followTable')
+                });
+            }
+        })
+
+        form.on('select(comment)', function (obj) {
+            $.post('task/batchUpdate', {"isOpenComment":obj.value}, function (res) {
+                table.reload('followTable')
+            });
+        })
+
+        function batchUpdateScore() {
+            var checkStatus = table.checkStatus('followTable')
+            var ids = []
+            for (var data of checkStatus.data) {
+                if(!data.isOpenComment) {
+                    layer.alert('请等待总评开启!')
+                    return
+                }
+                ids.push(data.id)
+            }
+            if (ids.length > 0) {
+                $.post('task/batchUpdate', {ids: ids.join(","), "score": $("#score").val()}, function (res) {
+                    table.reload('followTable')
+                });
+            }
+        }
+
+        $(function () {
+            if(roleType != 1) {
+                $('#addDiv').hide()
+                $('#openCommentDiv').hide()
+            }
+        });
+   });
+
+</script>
+
+</body>
+</html>

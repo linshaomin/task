@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+    <link rel="stylesheet" type="text/css" href="login.css"/>
+</head>
+<body>
+<div id="login">
+    <h1>Login</h1>
+    <div>
+        <input type="text" required="required" placeholder="用户名" id="account">
+        <input type="password" required="required" placeholder="密码" id="password">
+        <button class="but" type="submit">登录</button>
+    </div>
+</div>
+</body>
+</html>
+<script src="/layui/layui.js"></script>
+<script>
+    layui.use(['jquery','layer'], function () {
+        var $ = layui.$;
+        var layer = layui.layer;
+        $('.but').on('click', function () {
+            var account = $('#account').val()
+            var password = $('#password').val()
+            $.post('login', {account,password}, function (res) {
+                //写入数据
+                if(res.isSuccess) {
+                    window.sessionStorage.setItem('userId',res.data.id)
+                    window.sessionStorage.setItem('userName', res.data.name)
+                    window.sessionStorage.setItem('roleType', res.data.roleType)
+                    window.location.href='main.html'
+                } else {
+                    layer.msg(res.msg)
+                }
+            });
+        });
+    });
+
+</script>
